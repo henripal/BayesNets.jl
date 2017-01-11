@@ -355,10 +355,3 @@ end
 The pdf of a set of assignment after conditioning on the values
 """
 CPDs.pdf(bn::BayesNet, df::DataFrame) = exp(logpdf(bn, df))
-
-"""
-just testing
-"""
-function hi()
-    println("hi")
-end
