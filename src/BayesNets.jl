@@ -15,7 +15,7 @@ import Base.Collections: PriorityQueue, peek
 import Iterators: subsets, product
 import StatsBase: sample, WeightVec
 import TikzGraphs: plot
-import LightGraphs: DiGraph, add_edge!, rem_edge!,
+import LightGraphs: DiGraph, Graph, add_edge!, rem_edge!,
        add_vertex!, rem_vertex!, has_edge,
        edges, topological_sort_by_dfs, in_neighbors,
        out_neighbors, neighbors, is_cyclic, nv, ne,
@@ -24,6 +24,8 @@ import LightGraphs: DiGraph, add_edge!, rem_edge!,
 export
     BayesNet,
     DAG,
+
+    MRF,
 
     parents,
     children,
@@ -124,6 +126,7 @@ include(joinpath("DiscreteBayesNet", "scan_greedy_hill_climbing.jl"))
 include(joinpath("Factors", "factors.jl"))
 include(joinpath("Inference", "inference.jl"))
 
+include("mrfs.jl")
 # include("gen_bayes_nets.jl")
 # include(joinpath("inference", "inference.jl"))
 # include(joinpath("inference", "exact.jl"))
