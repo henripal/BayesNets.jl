@@ -180,3 +180,17 @@ function pattern(ϕ::Factor)
             zip(lens, inners, outers)]...)
 end
 
+"""
+rand(Φ::Factor)
+
+Returns an assignment over the Factor sampled using a
+Categorical distribution with probabilities Φ.potential
+"""
+function Base.rand(Φ::Factor)::Assignment
+    proba = collect(Base.flatten(Φ.potential))
+    proba = proba/sum(proba)
+
+    sample_index = rand(Categorical(proba))
+
+    Assignment(zip(Φ.dimensions, pattern(Φ)[sample_index,:]))
+end

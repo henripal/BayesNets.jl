@@ -80,9 +80,44 @@ function markov_blanket(mrf::MRF, target::NodeName)
     return neighbors(mrf, target)
 end
 
+"""
+Whether the MRF contains the given edge
+"""
 function has_edge(mrf::MRF, source::NodeName, target::NodeName)::Bool
     u = get(mrf.name_to_index, source, 0)
     v = get(mrf.name_to_index, target, 0)
     u != 0 && v != 0 && has_edge(mrf.ug, u, v)
 end
    
+"""
+Returns whether the set of node names `x` is d-separated
+from the set `y` given the set `given`
+"""
+function is_independent(mrf::MRF, x::AbstractVector{NodeName}, y::AbstractVector{NodeName}, given::AbstractVector{NodeName})
+    ug_copy = copy(mrf.ug)
+    # we copy the mrf, then remove all edges
+    # from `given`; then calc the connected components
+    # if x and y are in different connected components then they are independent
+
+    x_index = [mrf.name_to_index[node] for node in x]
+    y_index = [mrf.name_to_index[node] for node in y]
+    g_index = [mrf.name_to_index[node] for node in given]
+
+    for g in g_index
+        for n in neighbors(mrf.ug, g)
+            rem_edge!(ug_copy, g, n)
+        end
+    end
+
+    conn_components = connected_components(ug_copy)
+
+    for component in conn_components
+        if !isempty(intersect(component, x_index))
+            if !isempty(intersect(component, y_index))
+                return false
+            end
+        end
+    end
+
+    return true
+end
