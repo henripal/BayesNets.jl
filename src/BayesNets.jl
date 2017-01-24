@@ -19,13 +19,15 @@ import LightGraphs: DiGraph, Graph, add_edge!, rem_edge!,
        add_vertex!, rem_vertex!, has_edge,
        edges, topological_sort_by_dfs, in_neighbors,
        out_neighbors, neighbors, is_cyclic, nv, ne,
-       outdegree, badj, bfs_tree, connected_components
+       outdegree, badj, bfs_tree, connected_components,
+       vertices
 
 export
     BayesNet,
     DAG,
 
     MRF,
+    MRFGibbsSampler,
 
     parents,
     children,
@@ -127,6 +129,7 @@ include(joinpath("Factors", "factors.jl"))
 include(joinpath("Inference", "inference.jl"))
 
 include("mrfs.jl")
+include("mrf_gibbs.jl")
 # include("gen_bayes_nets.jl")
 # include(joinpath("inference", "inference.jl"))
 # include(joinpath("inference", "exact.jl"))
