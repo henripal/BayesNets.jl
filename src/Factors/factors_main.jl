@@ -187,7 +187,7 @@ Returns an assignment over the Factor sampled using a
 Categorical distribution with probabilities Φ.potential
 """
 function Base.rand(Φ::Factor)::Assignment
-    proba = collect(Base.flatten(Φ.potential))
+    proba = Φ.potential[:]
     proba = proba/sum(proba)
 
     sample_index = rand(Categorical(proba))

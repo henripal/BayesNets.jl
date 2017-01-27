@@ -89,11 +89,7 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
     # burn in, if present
     if burn_in != 0
         for burn_in_sample in 1:burn_in
-            for v in vertices(mrf.ug)
-                other_assg = filter((k, val) -> k != Symbol(v), current_sample)
-                new_f = reduce(*, [f[other_assg] for f in mrf.factors])
-                current_sample = merge(current_sample, rand(new_f))
-            end
+            current_sample = gibbs_sample_loop(mrf, current_sample)
         end
     end
 
@@ -102,20 +98,11 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
 
         # first skip over the thinning 
         for skip_iter in 1:thinning
-            for v in vertices(mrf.ug)
-                other_assg = filter((k, val) -> k != Symbol(v), current_sample)
-                new_f = reduce(*, [f[other_assg] for f in mrf.factors])
-                current_sample = merge(current_sample, rand(new_f))
-            end
+            current_sample = gibbs_sample_loop(mrf, current_sample)
         end
         
         # real loop, we store the values in the dict
-        for v in vertices(mrf.ug)
-            other_assg = filter((k, val) -> k != Symbol(v), current_sample)
-            new_f = reduce(*, [f[other_assg] for f in mrf.factors])
-            current_sample = merge(current_sample, rand(new_f))
-            push!(t[Symbol(v)], current_sample[Symbol(v)])
-        end
+        current_sample = gibbs_sample_loop(mrf, current_sample, t)
            
     end
 
@@ -123,3 +110,32 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
 end
 
         
+function gibbs_sample_loop(mrf::MRF, current_sample::Assignment, results::Dict{Symbol, Vector{Any}} = Dict{Symbol, Vector{Any}}())::Assignment
+    sample::Assignment = Assignment()
+    other_assg::Assignment = Assignment()
+    
+    for v in vertices(mrf.ug)
+        other_assg = copy(current_sample) # this is faster than filter
+        delete!(other_assg, Symbol(v))
+        new_f = reduce(*, [mrf.factors[factor_index][other_assg] for factor_index in mrf.name_to_factor_indices[Symbol(v)]])
+        # sample = rand(new_f)
+        # @assert length(new_f) == 2
+        proba = new_f.potential[:]
+        proba = proba/sum(proba)
+        sample_index = rand(Categorical(proba))
+        current_sample[Symbol(v)] = sample_index
+        # for (k, val) in sample
+            # current_sample[k] = val
+        # end
+       # current_sample = merge(current_sample, sample)
+        if ~ isempty(results)
+            push!(results[Symbol(v)], current_sample[Symbol(v)])
+        end
+    end
+    return current_sample
+end
+
+
+
+    
+    

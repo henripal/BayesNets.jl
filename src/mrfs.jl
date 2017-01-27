@@ -9,15 +9,22 @@ and contains an associated conditional probability distribution P(xⱼ | parents
 typealias UG Graph
 function _build_ug_from_factors{T<:Factor}(
     factors::AbstractVector{T},
-    name_to_index::Dict{NodeName, Int}
+    name_to_index::Dict{NodeName, Int},
+    name_to_factor_indices::Dict{NodeName, Array{Int}}
     )
     
     # Dict already has unique node names
     ug = UG(length(name_to_index))
 
     # Build the UG by linking all edges within a given factor
-    for factor in factors
-        for d1 in factor.dimensions, d2 in factor.dimensions
+    for (factor_index, factor) in enumerate(factors)
+        for d in factor.dimensions
+            if ~ (factor_index in name_to_factor_indices[d])
+                push!(name_to_factor_indices[d], factor_index)
+            end
+        end
+        
+        for d1 in factor.dimensions, d2 in factor.dimensions        
             i, j = name_to_index[d1], name_to_index[d2]
             if i <j
                 add_edge!(ug, i, j)
@@ -33,22 +40,28 @@ type MRF{T<:Factor}
     factors::Vector{T} # the factors associated with the MRF
     names::Vector{NodeName}
     name_to_index::Dict{NodeName,Int} # NodeName → index in ug 
+    name_to_factor_indices::Dict{NodeName, Array{Int}}
 end
-MRF() = MRF(UG(0), Factor[], NodeName[], Dict{NodeName, Int}())
-MRF{T <: Factor}(::Type{T}) = MRF(UG(0), T[], NodeName[], Dict{NodeName, Int}())
+MRF() = MRF(UG(0), Factor[], NodeName[], Dict{NodeName, Int}(), Dict{NodeName, Array{Int}}())
+MRF{T <: Factor}(::Type{T}) = MRF(UG(0), T[], NodeName[], Dict{NodeName, Int}(), Dict{NodeName, Array{Int}}())
 
 function MRF{T <: Factor}(factors::AbstractVector{T})
     name_to_index = Dict{NodeName, Int}()
+    name_to_factor_indices = Dict{NodeName, Array{Int}}()
+    names = Array{Symbol}[]
     # We need a collection of unique nodes to create the graph
-    names = unique(collect(Base.flatten([factor.dimensions for factor in factors])))
+    if isempty(names)
+        names = unique(collect(Base.flatten([factor.dimensions for factor in factors])))
+    end
 
     for (i, node) in enumerate(names)
         name_to_index[node] = i
+        name_to_factor_indices[node] = []
     end
 
-    ug = _build_ug_from_factors(factors, name_to_index)
+    ug = _build_ug_from_factors(factors, name_to_index, name_to_factor_indices)
 
-    MRF(ug, factors, names, name_to_index)
+    MRF(ug, factors, names, name_to_index, name_to_factor_indices)
 end
 
 Base.get(mrf::MRF, i::Int) = mrf.names[i]
@@ -120,4 +133,16 @@ function is_independent(mrf::MRF, x::AbstractVector{NodeName}, y::AbstractVector
     end
 
     return true
+end
+
+#### IO to be reworked.
+
+
+function plot(mrf::MRF)
+    plot(mrf.ug, AbstractString[string(s) for s in mrf.names])
+end
+
+
+@compat function Base.show(f::IO, a::MIME"image/svg+xml", mrf::MRF)
+    show(f, a, plot(mrf))
 end
