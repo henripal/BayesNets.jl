@@ -28,6 +28,7 @@ export
 
     MRF,
     MRFGibbsSampler,
+    evidence_reduce,
 
     parents,
     children,

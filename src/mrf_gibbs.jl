@@ -43,8 +43,7 @@ Sampling requires an MRFGibbsSampler object which contains the parameters
 """
 function Base.rand(mrf::MRF, sampler::MRFGibbsSampler, nsamples::Integer)
 
-    return gibbs_sample(mrf, nsamples, sampler.burn_in, thinning=sampler.thinning,
-                        evidence=sampler.evidence, initial_sample=sampler.initial_sample)
+    return gibbs_sample(mrf, nsamples, sampler.burn_in, thinning=sampler.thinning, evidence=sampler.evidence, initial_sample=sampler.initial_sample)
 end
 
 
@@ -76,6 +75,7 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
             end
         end
     end
+    initial_sample = merge(initial_sample,evidence)
 
     # create the data frame
     t = Dict{Symbol, Vector{Any}}()
@@ -89,7 +89,7 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
     # burn in, if present
     if burn_in != 0
         for burn_in_sample in 1:burn_in
-            current_sample = gibbs_sample_loop(mrf, current_sample)
+            current_sample = gibbs_sample_loop(mrf, current_sample, evidence)
         end
     end
 
@@ -98,11 +98,11 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
 
         # first skip over the thinning 
         for skip_iter in 1:thinning
-            current_sample = gibbs_sample_loop(mrf, current_sample)
+            current_sample = gibbs_sample_loop(mrf, current_sample, evidence)
         end
         
         # real loop, we store the values in the dict
-        current_sample = gibbs_sample_loop(mrf, current_sample, t)
+        current_sample = gibbs_sample_loop(mrf, current_sample,evidence, t)
            
     end
 
@@ -110,11 +110,20 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
 end
 
         
-function gibbs_sample_loop(mrf::MRF, current_sample::Assignment, results::Dict{Symbol, Vector{Any}} = Dict{Symbol, Vector{Any}}())::Assignment
+function gibbs_sample_loop(mrf::MRF, current_sample::Assignment,
+                           evidence::Assignment, results::Dict{Symbol, Vector{Any}} = Dict{Symbol, Vector{Any}}())::Assignment
     sample::Assignment = Assignment()
     other_assg::Assignment = Assignment()
+    sample = merge(current_sample, evidence)
     
     for v in vertices(mrf.ug)
+        if Symbol(v) in keys(evidence)
+            if ~ isempty(results)
+                push!(results[Symbol(v)], current_sample[Symbol(v)])
+            end
+            continue
+        end
+            
         other_assg = copy(current_sample) # this is faster than filter
         delete!(other_assg, Symbol(v))
         new_f = reduce(*, [mrf.factors[factor_index][other_assg] for factor_index in mrf.name_to_factor_indices[Symbol(v)]])

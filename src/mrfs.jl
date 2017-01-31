@@ -60,8 +60,8 @@ function MRF{T <: Factor}(factors::AbstractVector{T})
     end
 
     ug = _build_ug_from_factors(factors, name_to_index, name_to_factor_indices)
-
     MRF(ug, factors, names, name_to_index, name_to_factor_indices)
+
 end
 
 Base.get(mrf::MRF, i::Int) = mrf.names[i]
@@ -134,6 +134,28 @@ function is_independent(mrf::MRF, x::AbstractVector{NodeName}, y::AbstractVector
 
     return true
 end
+
+"""
+Reduces the MRF given evidence
+"""
+function evidence_reduce(mrf::MRF, evidence::Assignment)
+    new_factors = Array{Factor,1}()
+
+    for factor in mrf.factors
+        small_evidence = Assignment()
+        for dimension in factor.dimensions
+            try
+                push!(small_evidence, dimension => evidence[dimension])
+            end
+        end
+        push!(new_factors, factor[small_evidence])
+
+    end
+
+  new_factors 
+    
+end
+
 
 #### IO to be reworked.
 
