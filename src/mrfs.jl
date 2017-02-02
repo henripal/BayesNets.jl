@@ -152,7 +152,7 @@ function evidence_reduce(mrf::MRF, evidence::Assignment)
 
     end
 
-  new_factors 
+  MRF(new_factors); 
     
 end
 

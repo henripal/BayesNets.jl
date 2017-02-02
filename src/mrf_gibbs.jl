@@ -65,17 +65,20 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
         end
     end
 
+    # reduce the MRF according to the evidence:
+    mrf_reduced = evidence_reduce(mrf, evidence)
+
     if isnull(initial_sample)
         # Hacky
         initial_sample = Assignment()
-        for factor in mrf.factors
+        for factor in mrf_reduced.factors
             for (i, vertex) in enumerate(factor.dimensions)
                 n_categories = length(factor.potential[:, i])
                 initial_sample[vertex] = rand(Categorical(n_categories))
             end
         end
     end
-    initial_sample = merge(initial_sample,evidence)
+
 
     # create the data frame
     t = Dict{Symbol, Vector{Any}}()
@@ -89,7 +92,7 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
     # burn in, if present
     if burn_in != 0
         for burn_in_sample in 1:burn_in
-            current_sample = gibbs_sample_loop(mrf, current_sample, evidence)
+            current_sample = gibbs_sample_loop(mrf_reduced, current_sample)
         end
     end
 
@@ -98,11 +101,11 @@ function gibbs_sample(mrf::MRF, nsamples::Integer, burn_in::Integer;
 
         # first skip over the thinning 
         for skip_iter in 1:thinning
-            current_sample = gibbs_sample_loop(mrf, current_sample, evidence)
+            current_sample = gibbs_sample_loop(mrf_reduced, current_sample)
         end
         
         # real loop, we store the values in the dict
-        current_sample = gibbs_sample_loop(mrf, current_sample,evidence, t)
+        current_sample = gibbs_sample_loop(mrf_reduced, current_sample, t)
            
     end
 
@@ -111,32 +114,19 @@ end
 
         
 function gibbs_sample_loop(mrf::MRF, current_sample::Assignment,
-                           evidence::Assignment, results::Dict{Symbol, Vector{Any}} = Dict{Symbol, Vector{Any}}())::Assignment
+                           results::Dict{Symbol, Vector{Any}} = Dict{Symbol, Vector{Any}}())::Assignment
     sample::Assignment = Assignment()
     other_assg::Assignment = Assignment()
-    sample = merge(current_sample, evidence)
     
     for v in vertices(mrf.ug)
-        if Symbol(v) in keys(evidence)
-            if ~ isempty(results)
-                push!(results[Symbol(v)], current_sample[Symbol(v)])
-            end
-            continue
-        end
             
         other_assg = copy(current_sample) # this is faster than filter
         delete!(other_assg, Symbol(v))
         new_f = reduce(*, [mrf.factors[factor_index][other_assg] for factor_index in mrf.name_to_factor_indices[Symbol(v)]])
-        # sample = rand(new_f)
-        # @assert length(new_f) == 2
         proba = new_f.potential[:]
         proba = proba/sum(proba)
         sample_index = rand(Categorical(proba))
         current_sample[Symbol(v)] = sample_index
-        # for (k, val) in sample
-            # current_sample[k] = val
-        # end
-       # current_sample = merge(current_sample, sample)
         if ~ isempty(results)
             push!(results[Symbol(v)], current_sample[Symbol(v)])
         end
